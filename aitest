@@ -31,7 +31,8 @@ local Config = {
     Enabled = false,
     Distance = 4,
     SelectedMob = "All",
-    TPSpeed = 0.1
+    TPSpeed = 0.1,
+    RemoveEffects = false
 }
 
 -- Simple GUI
@@ -54,7 +55,8 @@ local UICorner = Instance.new("UICorner", MainFrame)
 
 local Title = Instance.new("TextLabel")
 Title.Name = "FarmTitle"
-Title.Size = UDim2.new(1, 0, 0, 35)
+Title.Size = UDim2.new(0, 300, 0, 35)
+Title.Position = UDim2.new(0, 0, 0, 0)
 Title.Text = "  MOBILE & PC AUTO FARM"
 Title.TextColor3 = Color3.new(1, 1, 1)
 Title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
@@ -66,8 +68,8 @@ Title.Parent = MainFrame
 
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Name = "ToggleBtn"
-ToggleBtn.Size = UDim2.new(0.9, 0, 0, 45)
-ToggleBtn.Position = UDim2.new(0.05, 0, 0.15, 0)
+ToggleBtn.Size = UDim2.new(0, 280, 0, 45)
+ToggleBtn.Position = UDim2.new(0, 10, 0, 50) -- Absolute position
 ToggleBtn.Text = "Farm: OFF"
 ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
 ToggleBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -78,8 +80,8 @@ ToggleBtn.Parent = MainFrame
 
 local DistLabel = Instance.new("TextLabel")
 DistLabel.Name = "DistLabel"
-DistLabel.Size = UDim2.new(0.9, 0, 0, 20)
-DistLabel.Position = UDim2.new(0.05, 0, 0.32, 0)
+DistLabel.Size = UDim2.new(0, 150, 0, 20)
+DistLabel.Position = UDim2.new(0, 75, 0, 110)
 DistLabel.Text = "Mesafe: 4"
 DistLabel.TextColor3 = Color3.new(0.8, 0.8, 0.8)
 DistLabel.BackgroundTransparency = 1
@@ -89,12 +91,30 @@ DistLabel.Parent = MainFrame
 
 local ScrollingFrame = Instance.new("ScrollingFrame")
 ScrollingFrame.Name = "FarmList"
-ScrollingFrame.Size = UDim2.new(0.9, 0, 0, 150)
-ScrollingFrame.Position = UDim2.new(0.05, 0, 0.45, 0)
+ScrollingFrame.Size = UDim2.new(0, 280, 0, 150)
+ScrollingFrame.Position = UDim2.new(0, 10, 0, 150)
 ScrollingFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 ScrollingFrame.BorderSizePixel = 0
 ScrollingFrame.ScrollBarThickness = 6
 ScrollingFrame.Parent = MainFrame
+
+local SettingsFrame = Instance.new("Frame")
+SettingsFrame.Name = "SettingsFrame"
+SettingsFrame.Size = UDim2.new(0, 280, 0, 250)
+SettingsFrame.Position = UDim2.new(0, 10, 0, 50)
+SettingsFrame.BackgroundTransparency = 1
+SettingsFrame.Visible = false
+SettingsFrame.Parent = MainFrame
+
+local MainContent = {ToggleBtn, DistLabel, ScrollingFrame, MinusBtn, PlusBtn} -- Group for switching
+
+local function ShowTab(name)
+    local isSettings = (name == "Settings")
+    SettingsFrame.Visible = isSettings
+    for _, v in pairs(MainContent) do
+        if v then v.Visible = not isSettings end
+    end
+end
 
 -- Remove UIListLayout and calculate positions manually to bypass Delta bugs
 -- Utility
@@ -113,7 +133,8 @@ local function UpdateList()
     
     local function CreateMobBtn(name, displayName)
         local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(1, -15, 0, btnHeight)
+        -- Use strict pixel counts to avoid Delta scaling bugs
+        btn.Size = UDim2.new(0, 260, 0, btnHeight)
         btn.Position = UDim2.new(0, 5, 0, yOffset)
         btn.Text = displayName or name
         btn.TextScaled = true
@@ -169,6 +190,123 @@ ToggleBtn.Activated:Connect(function()
     ToggleBtn.BackgroundColor3 = Config.Enabled and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(180, 50, 50)
 end)
 
+-- Settings Tabs Buttons
+local MainTabBtn = Instance.new("TextButton")
+MainTabBtn.Size = UDim2.new(0, 140, 0, 25)
+MainTabBtn.Position = UDim2.new(0, 5, 0, 315)
+MainTabBtn.Text = "Main"
+MainTabBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+MainTabBtn.TextColor3 = Color3.new(1, 1, 1)
+MainTabBtn.BorderSizePixel = 0
+MainTabBtn.Parent = MainFrame
+MainTabBtn.Activated:Connect(function() ShowTab("Main") end)
+
+local SettingsTabBtn = Instance.new("TextButton")
+SettingsTabBtn.Size = UDim2.new(0, 140, 0, 25)
+SettingsTabBtn.Position = UDim2.new(0, 155, 0, 315)
+SettingsTabBtn.Text = "Settings"
+SettingsTabBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+SettingsTabBtn.TextColor3 = Color3.new(1, 1, 1)
+SettingsTabBtn.BorderSizePixel = 0
+SettingsTabBtn.Parent = MainFrame
+SettingsTabBtn.Activated:Connect(function() ShowTab("Settings") end)
+
+-- Settings Content
+local RemoveEffectsBtn = Instance.new("TextButton")
+RemoveEffectsBtn.Size = UDim2.new(1, 0, 0, 40)
+RemoveEffectsBtn.Position = UDim2.new(0, 0, 0, 0)
+RemoveEffectsBtn.Text = "Remove Effects: OFF"
+RemoveEffectsBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+RemoveEffectsBtn.TextColor3 = Color3.new(1, 1, 1)
+RemoveEffectsBtn.BorderSizePixel = 0
+RemoveEffectsBtn.Parent = SettingsFrame
+
+RemoveEffectsBtn.Activated:Connect(function()
+    Config.RemoveEffects = not Config.RemoveEffects
+    RemoveEffectsBtn.Text = "Remove Effects: " .. (Config.RemoveEffects and "ON" or "OFF")
+    RemoveEffectsBtn.BackgroundColor3 = Config.RemoveEffects and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(180, 50, 50)
+end)
+
+local FpsBoostBtn = Instance.new("TextButton")
+FpsBoostBtn.Size = UDim2.new(1, 0, 0, 40)
+FpsBoostBtn.Position = UDim2.new(0, 0, 0, 50)
+FpsBoostBtn.Text = "FPS Boost (Click Once)"
+FpsBoostBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 150)
+FpsBoostBtn.TextColor3 = Color3.new(1, 1, 1)
+FpsBoostBtn.BorderSizePixel = 0
+FpsBoostBtn.Parent = SettingsFrame
+
+FpsBoostBtn.Activated:Connect(function()
+    -- EXTREME FPS Boost logic
+    local lighting = game:GetService("Lighting")
+    lighting.GlobalShadows = false
+    lighting.FogEnd = 9e9
+    lighting.Brightness = 1
+    
+    -- Disable Post-Processing Effects
+    for _, effect in pairs(lighting:GetChildren()) do
+        if effect:IsA("PostProcessEffect") or effect:IsA("BloomEffect") or effect:IsA("BlurEffect") or effect:IsA("ColorCorrectionEffect") or effect:IsA("SunRaysEffect") then
+            effect.Enabled = false
+        end
+    end
+    
+    settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+    
+    for _, v in pairs(game:GetDescendants()) do
+        if v:IsA("BasePart") then
+            v.Material = Enum.Material.SmoothPlastic
+            v.Reflectance = 0
+            v.CastShadow = false
+        elseif v:IsA("Decal") or v:IsA("Texture") then
+            v:Destroy()
+        elseif v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Fire") or v:IsA("Smoke") or v:IsA("Sparkles") then
+            v.Enabled = false
+        end
+    end
+    
+    -- Optimize Terrain
+    local terrain = workspace:FindFirstChildOfClass("Terrain")
+    if terrain then
+        terrain.WaterWaveSize = 0
+        terrain.WaterWaveSpeed = 0
+        terrain.WaterReflectance = 0
+        terrain.WaterTransparency = 0
+    end
+    
+    FpsBoostBtn.Text = "EXTREME BOOSTED!"
+    FpsBoostBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+end)
+
+-- Effects Cleaner: INSTANT Removal
+local function ClearVisual()
+    local visual = workspace:FindFirstChild("Visual")
+    if visual then
+        for _, child in pairs(visual:GetChildren()) do
+            if child.Name ~= "Player" then
+                pcall(function() child:Destroy() end)
+            end
+        end
+    end
+end
+
+-- Listen for new items instantly
+task.spawn(function()
+    local visual = workspace:WaitForChild("Visual")
+    visual.ChildAdded:Connect(function(child)
+        if Config.RemoveEffects and child.Name ~= "Player" then
+            task.wait() -- Small wait to ensure it exists before destroying (prevents some engine crashes)
+            pcall(function() child:Destroy() end)
+        end
+    end)
+    
+    -- Periodic backup clear just in case
+    while task.wait(2) do
+        if Config.RemoveEffects then
+            ClearVisual()
+        end
+    end
+end)
+
 -- Loop
 task.spawn(function()
     while true do
@@ -195,8 +333,19 @@ task.spawn(function()
             
             -- Cycle through: find first alive
             if torso and hrp and torso.Transparency < 0.9 then
-                -- Stay until death (transparency 1)
-                while torso and torso.Parent and torso.Transparency < 0.9 and Config.Enabled do
+                -- Stay until death
+                while target and target.Parent and Config.Enabled do
+                    local isRaid = string.match(target.Name, "^Raids")
+                    local currentTorso = target:FindFirstChild("Torso")
+
+                    -- If NOT a raid, check transparency. If IS a raid, don't check transparency.
+                    if not isRaid then
+                        if not currentTorso or currentTorso.Transparency >= 0.9 then
+                            break
+                        end
+                    end
+                    
+                    if not currentTorso then break end
                     
                     local currentIsRaid = string.match(target.Name, "^Raids")
                     if Config.SelectedMob == "All Raids" then
@@ -206,7 +355,7 @@ task.spawn(function()
                     end
                     
                     hrp.Velocity = Vector3.new(0,0,0)
-                    hrp.CFrame = torso.CFrame * CFrame.new(0, 0, Config.Distance)
+                    hrp.CFrame = currentTorso.CFrame * CFrame.new(0, 0, Config.Distance)
                     Attack()
                     task.wait()
                 end
@@ -220,7 +369,7 @@ end)
 local MinusBtn = Instance.new("TextButton")
 MinusBtn.Name = "MinusBtn"
 MinusBtn.Size = UDim2.new(0, 35, 0, 30)
-MinusBtn.Position = UDim2.new(0.05, 0, 0.3, 0)
+MinusBtn.Position = UDim2.new(0, 10, 0, 105)
 MinusBtn.Text = "-"
 MinusBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 MinusBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -237,7 +386,7 @@ end)
 local PlusBtn = Instance.new("TextButton")
 PlusBtn.Name = "PlusBtn"
 PlusBtn.Size = UDim2.new(0, 35, 0, 30)
-PlusBtn.Position = UDim2.new(0.8, 0, 0.3, 0)
+PlusBtn.Position = UDim2.new(0, 255, 0, 105)
 PlusBtn.Text = "+"
 PlusBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 PlusBtn.TextColor3 = Color3.new(1, 1, 1)
