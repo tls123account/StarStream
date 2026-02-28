@@ -163,8 +163,9 @@ local function UpdateList()
                 added[npc.Name] = true
                 
                 local dName = npc.Name
-                if string.match(dName, "^Raids") then
-                    dName = "Raid: " .. string.sub(dName, 6, 15) .. "..."
+                local isRaid = string.find(string.lower(npc.Name), "raid")
+                if isRaid then
+                    dName = "Raid: " .. string.sub(dName, 1, 15) .. "..."
                 end
                 
                 CreateMobBtn(npc.Name, dName)
@@ -320,43 +321,51 @@ task.spawn(function()
         for _, target in ipairs(targets) do
             if not Config.Enabled then break end
             
-            local isRaid = string.match(target.Name, "^Raids")
+            local isRaid = string.find(string.lower(target.Name), "raid")
             if Config.SelectedMob == "All Raids" then
                 if not isRaid then continue end
             elseif Config.SelectedMob ~= "All" and target.Name ~= Config.SelectedMob then 
                 continue 
             end
 
-            local torso = target:FindFirstChild("Torso")
             local char = LocalPlayer.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            
-            -- Cycle through: find first alive (Bypass transparency for Raids)
-            if torso and hrp and (isRaid or torso.Transparency < 0.9) then
-                -- Stay until death
-                while target and target.Parent and Config.Enabled do
-                    local isRaid = string.match(target.Name, "^Raids")
-                    local currentTorso = target:FindFirstChild("Torso")
+            if not hrp then continue end
 
-                    -- If NOT a raid, check transparency. If IS a raid, don't check transparency.
-                    if not isRaid then
-                        if not currentTorso or currentTorso.Transparency >= 0.9 then
-                            break
-                        end
+            -- Get any valid part to TP to
+            local targetPart = target:FindFirstChild("Torso") or target:FindFirstChild("HumanoidRootPart") or target:FindFirstChildWhichIsA("BasePart")
+            
+            -- Entry Check
+            local canTarget = false
+            if isRaid then
+                canTarget = true -- Raids: Always target if model exists, ignore transparency
+            elseif targetPart and targetPart.Transparency < 0.9 then
+                canTarget = true -- Normal: Check transparency
+            end
+
+            if canTarget and targetPart then
+                -- Stay until model is deleted or disabled
+                while target and target.Parent and Config.Enabled do
+                    local isRaidNow = string.find(string.lower(target.Name), "raid")
+                    local currentPart = target:FindFirstChild("Torso") or target:FindFirstChild("HumanoidRootPart") or target:FindFirstChildWhichIsA("BasePart")
+                    
+                    if not currentPart then break end
+                    
+                    -- Death check for NORMAL mobs only (Raids ignore this)
+                    if not isRaidNow and currentPart.Transparency >= 0.9 then
+                        break
                     end
                     
-                    if not currentTorso then break end
-                    
-                    local currentIsRaid = string.match(target.Name, "^Raids")
+                    -- Selection check
                     if Config.SelectedMob == "All Raids" then
-                        if not currentIsRaid then break end
+                        if not isRaidNow then break end
                     elseif Config.SelectedMob ~= "All" and target.Name ~= Config.SelectedMob then 
                         break 
                     end
                     
                     hrp.Velocity = Vector3.new(0,0,0)
-                    hrp.CFrame = currentTorso.CFrame * CFrame.new(0, 0, Config.Distance)
-                    Attack()
+                    hrp.CFrame = currentPart.CFrame * CFrame.new(0, 0, Config.Distance)
+                    Attack() -- Keep attacking just in case
                     task.wait()
                 end
                 task.wait(0.1)
