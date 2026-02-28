@@ -198,12 +198,24 @@ StartRaidBtn.Activated:Connect(function()
     local Gameplays = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Gameplays")
     local Misc = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Misc")
     
-    -- 1. Parties Disable
-    pcall(function() Misc:WaitForChild("Parties"):FireServer("Disabled") end)
-    -- 2. Lobbies
-    pcall(function() Gameplays:WaitForChild("RaidsLobbies"):FireServer(Instance.new("Folder"), {[3] = true}) end)
-    -- 3. Start Event
+    -- Optional TP to Pod Center (Fix for remote firing distance)
+    pcall(function()
+        local podCenter = workspace:FindFirstChild("Raids_Entering") and workspace.Raids_Entering:FindFirstChild("Pod_01") and workspace.Raids_Entering.Pod_01:FindFirstChild("Centers")
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if podCenter and hrp then
+            hrp.CFrame = podCenter.CFrame
+            task.wait(0.2)
+        end
+    end)
+
+    -- Fire in exact order provided (Event -> Lobbies -> Parties)
+    -- 1. Start Event (Create)
     pcall(function() Systems:WaitForChild("RaidsEvent"):FireServer(Config.SelectedRaidLocation, Config.SelectedRaidDifficulty) end)
+    -- 2. Lobbies (Join/Set)
+    pcall(function() Gameplays:WaitForChild("RaidsLobbies"):FireServer(Instance.new("Folder"), {[3] = true}) end)
+    -- 3. Parties Disable (Lock)
+    pcall(function() Misc:WaitForChild("Parties"):FireServer("Disabled") end)
     
     StartRaidBtn.Text = "Starting..."
     task.wait(2)
@@ -502,7 +514,16 @@ task.spawn(function()
                     end
                     
                     hrp.Velocity = Vector3.new(0,0,0)
-                    hrp.CFrame = currentPart.CFrame * CFrame.new(0, 0, Config.Distance)
+                    
+                    if isRaidNow then
+                        -- Reverted Logic: Target Head and Torso directly for raids
+                        local raidPart = target:FindFirstChild("Head") or target:FindFirstChild("Torso") or currentPart
+                        hrp.CFrame = raidPart.CFrame
+                    else
+                        -- Normal Logic: Use distance offset
+                        hrp.CFrame = currentPart.CFrame * CFrame.new(0, 0, Config.Distance)
+                    end
+                    
                     Attack() -- Keep attacking just in case
                     task.wait()
                 end
