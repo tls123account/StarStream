@@ -1,0 +1,255 @@
+-- Anime Tactical UNIVERSAL Auto Farm (PC & MOBILE)
+-- No dependencies, very lightweight
+local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+-- Random String for Bypass
+local function randString()
+    local res = ""
+    for i = 1, 10 do res = res .. string.char(math.random(97, 122)) end
+    return res
+end
+
+-- Delta Bypass: Safe CoreGui
+local success, targetParent = pcall(function()
+    return gethui and gethui() or game:GetService("CoreGui")
+end)
+if not success or not targetParent then
+    targetParent = game:GetService("CoreGui")
+end
+
+-- Clean old ones
+for _, v in pairs(targetParent:GetChildren()) do
+    if v:IsA("ScreenGui") and v:FindFirstChild("UniversalFarmMain") then 
+        v:Destroy() 
+    end
+end
+
+local Config = {
+    Enabled = false,
+    Distance = 4,
+    SelectedMob = "All",
+    TPSpeed = 0.1
+}
+
+-- Simple GUI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = randString()
+-- Removed ZIndexBehavior and ResetOnSpawn as Delta sometimes throws silent errors on property sets
+ScreenGui.Parent = targetParent
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "UniversalFarmMain" -- Tag for cleaning
+MainFrame.Size = UDim2.new(0, 300, 0, 350)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -175)
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner", MainFrame)
+
+local Title = Instance.new("TextLabel")
+Title.Name = "FarmTitle"
+Title.Size = UDim2.new(1, 0, 0, 35)
+Title.Text = "  MOBILE & PC AUTO FARM"
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 16
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.BorderSizePixel = 0
+Title.Parent = MainFrame
+
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Name = "ToggleBtn"
+ToggleBtn.Size = UDim2.new(0.9, 0, 0, 45)
+ToggleBtn.Position = UDim2.new(0.05, 0, 0.15, 0)
+ToggleBtn.Text = "Farm: OFF"
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+ToggleBtn.TextColor3 = Color3.new(1, 1, 1)
+ToggleBtn.Font = Enum.Font.SourceSansBold
+ToggleBtn.TextSize = 18
+ToggleBtn.BorderSizePixel = 0
+ToggleBtn.Parent = MainFrame
+
+local DistLabel = Instance.new("TextLabel")
+DistLabel.Name = "DistLabel"
+DistLabel.Size = UDim2.new(0.9, 0, 0, 20)
+DistLabel.Position = UDim2.new(0.05, 0, 0.32, 0)
+DistLabel.Text = "Mesafe: 4"
+DistLabel.TextColor3 = Color3.new(0.8, 0.8, 0.8)
+DistLabel.BackgroundTransparency = 1
+DistLabel.TextSize = 14
+DistLabel.Font = Enum.Font.SourceSans
+DistLabel.Parent = MainFrame
+
+local ScrollingFrame = Instance.new("ScrollingFrame")
+ScrollingFrame.Name = "FarmList"
+ScrollingFrame.Size = UDim2.new(0.9, 0, 0, 150)
+ScrollingFrame.Position = UDim2.new(0.05, 0, 0.45, 0)
+ScrollingFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+ScrollingFrame.BorderSizePixel = 0
+ScrollingFrame.ScrollBarThickness = 6
+ScrollingFrame.Parent = MainFrame
+
+-- Remove UIListLayout and calculate positions manually to bypass Delta bugs
+-- Utility
+local function GetSafeClients()
+    local w = workspace:FindFirstChild("Worlds")
+    local t = w and w:FindFirstChild("Targets")
+    return t and t:FindFirstChild("Clients")
+end
+
+local function UpdateList()
+    for _, v in pairs(ScrollingFrame:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
+    
+    local yOffset = 0
+    local btnHeight = 30
+    local padding = 5
+    
+    local function CreateMobBtn(name, displayName)
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, -15, 0, btnHeight)
+        btn.Position = UDim2.new(0, 5, 0, yOffset)
+        btn.Text = displayName or name
+        btn.TextScaled = true
+        btn.BackgroundColor3 = (Config.SelectedMob == name) and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(35, 35, 35)
+        btn.TextColor3 = Color3.new(1, 1, 1)
+        btn.Font = Enum.Font.SourceSans
+        btn.BorderSizePixel = 0
+        btn.Parent = ScrollingFrame
+        
+        btn.Activated:Connect(function()
+            Config.SelectedMob = name
+            UpdateList()
+        end)
+        
+        yOffset = yOffset + btnHeight + padding
+    end
+
+    CreateMobBtn("All", "Tum Hedefler (All)")
+    CreateMobBtn("All Raids", "Sadece Raidler (All Raids)")
+    
+    local clients = GetSafeClients()
+    if clients then
+        local added = {}
+        for _, npc in ipairs(clients:GetChildren()) do
+            if not added[npc.Name] then
+                added[npc.Name] = true
+                
+                local dName = npc.Name
+                if string.match(dName, "^Raids") then
+                    dName = "Raid: " .. string.sub(dName, 6, 15) .. "..."
+                end
+                
+                CreateMobBtn(npc.Name, dName)
+            end
+        end
+    end
+    
+    ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, yOffset)
+end
+
+-- Mobile & PC Attack (Simulate Tool Use)
+local function Attack()
+    local char = LocalPlayer.Character
+    local tool = char and char:FindFirstChildWhichIsA("Tool")
+    if tool then
+        tool:Activate() -- Mobile-friendly tool use
+    end
+end
+
+ToggleBtn.Activated:Connect(function()
+    Config.Enabled = not Config.Enabled
+    ToggleBtn.Text = "Farm: " .. (Config.Enabled and "ON" or "OFF")
+    ToggleBtn.BackgroundColor3 = Config.Enabled and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(180, 50, 50)
+end)
+
+-- Loop
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        if not Config.Enabled then continue end
+        
+        local clients = GetSafeClients()
+        if not clients then continue end
+
+        local targets = clients:GetChildren()
+        for _, target in ipairs(targets) do
+            if not Config.Enabled then break end
+            
+            local isRaid = string.match(target.Name, "^Raids")
+            if Config.SelectedMob == "All Raids" then
+                if not isRaid then continue end
+            elseif Config.SelectedMob ~= "All" and target.Name ~= Config.SelectedMob then 
+                continue 
+            end
+
+            local torso = target:FindFirstChild("Torso")
+            local char = LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            
+            -- Cycle through: find first alive
+            if torso and hrp and torso.Transparency < 0.9 then
+                -- Stay until death (transparency 1)
+                while torso and torso.Parent and torso.Transparency < 0.9 and Config.Enabled do
+                    
+                    local currentIsRaid = string.match(target.Name, "^Raids")
+                    if Config.SelectedMob == "All Raids" then
+                        if not currentIsRaid then break end
+                    elseif Config.SelectedMob ~= "All" and target.Name ~= Config.SelectedMob then 
+                        break 
+                    end
+                    
+                    hrp.Velocity = Vector3.new(0,0,0)
+                    hrp.CFrame = torso.CFrame * CFrame.new(0, 0, Config.Distance)
+                    Attack()
+                    task.wait()
+                end
+                task.wait(0.1)
+            end
+        end
+    end
+end)
+
+-- Dist control via simple clicks for Mobile
+local MinusBtn = Instance.new("TextButton")
+MinusBtn.Name = "MinusBtn"
+MinusBtn.Size = UDim2.new(0, 35, 0, 30)
+MinusBtn.Position = UDim2.new(0.05, 0, 0.3, 0)
+MinusBtn.Text = "-"
+MinusBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+MinusBtn.TextColor3 = Color3.new(1, 1, 1)
+MinusBtn.Font = Enum.Font.SourceSansBold
+MinusBtn.TextSize = 20
+MinusBtn.BorderSizePixel = 0
+MinusBtn.Parent = MainFrame
+
+MinusBtn.Activated:Connect(function()
+    Config.Distance = math.max(2, Config.Distance - 1)
+    DistLabel.Text = "Mesafe: " .. Config.Distance
+end)
+
+local PlusBtn = Instance.new("TextButton")
+PlusBtn.Name = "PlusBtn"
+PlusBtn.Size = UDim2.new(0, 35, 0, 30)
+PlusBtn.Position = UDim2.new(0.8, 0, 0.3, 0)
+PlusBtn.Text = "+"
+PlusBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+PlusBtn.TextColor3 = Color3.new(1, 1, 1)
+PlusBtn.Font = Enum.Font.SourceSansBold
+PlusBtn.TextSize = 20
+PlusBtn.BorderSizePixel = 0
+PlusBtn.Parent = MainFrame
+
+PlusBtn.Activated:Connect(function()
+    Config.Distance = math.min(15, Config.Distance + 1)
+    DistLabel.Text = "Mesafe: " .. Config.Distance
+end)
+
+UpdateList()
+print("Universal (Mobile/PC) Farm Loaded!")
