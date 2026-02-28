@@ -32,7 +32,8 @@ local Config = {
     Distance = 4,
     SelectedMob = "All",
     TPSpeed = 0.1,
-    RemoveEffects = false
+    RemoveEffects = false,
+    AutoCollectRewards = false
 }
 
 -- Simple GUI
@@ -57,7 +58,7 @@ local Title = Instance.new("TextLabel")
 Title.Name = "FarmTitle"
 Title.Size = UDim2.new(0, 300, 0, 35)
 Title.Position = UDim2.new(0, 0, 0, 0)
-Title.Text = "  MOBILE & PC AUTO FARM"
+Title.Text = "  MOBILE & PC AUTO FARM V2"
 Title.TextColor3 = Color3.new(1, 1, 1)
 Title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 Title.Font = Enum.Font.SourceSansBold
@@ -278,6 +279,21 @@ FpsBoostBtn.Activated:Connect(function()
     FpsBoostBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
 end)
 
+local AutoCollectBtn = Instance.new("TextButton")
+AutoCollectBtn.Size = UDim2.new(1, 0, 0, 40)
+AutoCollectBtn.Position = UDim2.new(0, 0, 0, 100)
+AutoCollectBtn.Text = "Auto Collect Rewards: OFF"
+AutoCollectBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+AutoCollectBtn.TextColor3 = Color3.new(1, 1, 1)
+AutoCollectBtn.BorderSizePixel = 0
+AutoCollectBtn.Parent = SettingsFrame
+
+AutoCollectBtn.Activated:Connect(function()
+    Config.AutoCollectRewards = not Config.AutoCollectRewards
+    AutoCollectBtn.Text = "Auto Collect Rewards: " .. (Config.AutoCollectRewards and "ON" or "OFF")
+    AutoCollectBtn.BackgroundColor3 = Config.AutoCollectRewards and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(180, 50, 50)
+end)
+
 -- Effects Cleaner: INSTANT Removal
 local function ClearVisual()
     local visual = workspace:FindFirstChild("Visual")
@@ -304,6 +320,25 @@ task.spawn(function()
     while task.wait(2) do
         if Config.RemoveEffects then
             ClearVisual()
+        end
+        if Config.AutoCollectRewards then
+            local raids_visual = workspace:FindFirstChild("Raids_Visual")
+            if raids_visual then
+                for _, server_folder in pairs(raids_visual:GetChildren()) do
+                    if string.find(server_folder.Name, LocalPlayer.Name) then
+                        pcall(function()
+                            local rewards = server_folder:FindFirstChild("Configs") and server_folder.Configs:FindFirstChild("Others") and server_folder.Configs.Others:FindFirstChild("Rewards")
+                            if rewards then
+                                local special = rewards:FindFirstChild("Special") and rewards.Special:FindFirstChild("Primary") and rewards.Special.Primary:FindFirstChildOfClass("ProximityPrompt")
+                                if special then fireproximityprompt(special) end
+                                
+                                local golds = rewards:FindFirstChild("Golds") and rewards.Golds:FindFirstChild("Primary") and rewards.Golds.Primary:FindFirstChildOfClass("ProximityPrompt")
+                                if golds then fireproximityprompt(golds) end
+                            end
+                        end)
+                    end
+                end
+            end
         end
     end
 end)
@@ -410,4 +445,4 @@ PlusBtn.Activated:Connect(function()
 end)
 
 UpdateList()
-print("Universal (Mobile/PC) Farm Loaded!UPDATEE")
+print("Universal (Mobile/PC) Farm Loaded!")
