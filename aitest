@@ -109,7 +109,8 @@ SettingsFrame.BackgroundTransparency = 1
 SettingsFrame.Visible = false
 SettingsFrame.Parent = MainFrame
 
-local MainContent = {ToggleBtn, DistLabel, ScrollingFrame, MinusBtn, PlusBtn} -- Group for switching
+-- Tab switching logic (MainContent table initialized later to include all buttons)
+local MainContent = {} 
 
 local function ShowTab(name)
     local isSettings = (name == "Settings")
@@ -118,7 +119,7 @@ local function ShowTab(name)
         if v then v.Visible = (name == "Main") end
     end
     SettingsFrame.Visible = (name == "Settings")
-    RaidFrame.Visible = (name == "Raid")
+    if RaidFrame then RaidFrame.Visible = (name == "Raid") end
 end
 
 -- RAID TAB CONTENT
@@ -281,6 +282,19 @@ local function UpdateList()
     
     ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, yOffset)
 end
+
+-- Auto-refresh list when NPCs change
+task.spawn(function()
+    while true do
+        local clients = GetSafeClients()
+        if clients then
+            clients.ChildAdded:Connect(UpdateList)
+            clients.ChildRemoved:Connect(UpdateList)
+            break
+        end
+        task.wait(1)
+    end
+end)
 
 -- Mobile & PC Attack (Simulate Tool Use)
 local function Attack()
@@ -471,6 +485,9 @@ task.spawn(function()
         for _, target in ipairs(targets) do
             if not Config.Enabled then break end
             
+            -- Basic existence check before starting
+            if not target or not target.Parent then continue end
+
             local isRaid = string.find(string.lower(target.Name), "raid")
             if Config.SelectedMob == "All Raids" then
                 if not isRaid then continue end
@@ -482,52 +499,38 @@ task.spawn(function()
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
             if not hrp then continue end
 
-            -- Get any valid part to TP to (Priority: Torso > Head > HRP > Any)
-            local targetPart = target:FindFirstChild("Torso") or target:FindFirstChild("Head") or target:FindFirstChild("HumanoidRootPart") or target:FindFirstChildWhichIsA("BasePart")
-            
-            -- Entry Check
-            local canTarget = false
-            if isRaid then
-                canTarget = true -- Raids: Always target if model exists, ignore transparency
-            elseif targetPart and targetPart.Transparency < 0.9 then
-                canTarget = true -- Normal: Check transparency
-            end
-
-            if canTarget and targetPart then
-                -- Stay until model is deleted or disabled
-                while target and target.Parent and Config.Enabled do 
-                    local isRaidNow = string.find(string.lower(target.Name), "raid")
-                    local currentPart = target:FindFirstChild("Torso") or target:FindFirstChild("Head") or target:FindFirstChild("HumanoidRootPart") or target:FindFirstChildWhichIsA("BasePart")
-                    
-                    if not currentPart then break end
-                    
-                    -- Death check for NORMAL mobs only (Raids ignore this)
-                    if not isRaidNow and currentPart.Transparency >= 0.9 then
-                        break
-                    end
-                    
-                    -- Selection check
-                    if Config.SelectedMob == "All Raids" then
-                        if not isRaidNow then break end
-                    elseif Config.SelectedMob ~= "All" and target.Name ~= Config.SelectedMob then 
-                        break 
-                    end
-                    
-                    hrp.Velocity = Vector3.new(0,0,0)
-                    
-                    if isRaidNow then
-                        -- Reverted Logic: Target Head and Torso directly for raids
-                        local raidPart = target:FindFirstChild("Head") or target:FindFirstChild("Torso") or currentPart
-                        hrp.CFrame = raidPart.CFrame
-                    else
-                        -- Normal Logic: Use distance offset
-                        hrp.CFrame = currentPart.CFrame * CFrame.new(0, 0, Config.Distance)
-                    end
-                    
-                    Attack() -- Keep attacking just in case
-                    task.wait()
+            -- Target Logic
+            while target and target.Parent and Config.Enabled do 
+                local isRaidNow = string.find(string.lower(target.Name), "raid")
+                local currentPart = target:FindFirstChild("Torso") or target:FindFirstChild("Head") or target:FindFirstChild("HumanoidRootPart") or target:FindFirstChildWhichIsA("BasePart")
+                
+                if not currentPart then break end
+                
+                -- Death check for NORMAL mobs only (Raids ignore transparency/death state)
+                if not isRaidNow and currentPart.Transparency >= 0.9 then
+                    break
                 end
-                task.wait(0.1)
+                
+                -- Selection check
+                if Config.SelectedMob == "All Raids" then
+                    if not isRaidNow then break end
+                elseif Config.SelectedMob ~= "All" and target.Name ~= Config.SelectedMob then 
+                    break 
+                end
+                
+                hrp.Velocity = Vector3.new(0,0,0)
+                
+                if isRaidNow then
+                    -- Simplified TP: Directly onto Head/Torso for Raids
+                    local raidPart = target:FindFirstChild("Head") or target:FindFirstChild("Torso") or currentPart
+                    hrp.CFrame = raidPart.CFrame
+                else
+                    -- Normal TP: Follow with Distance Offset
+                    hrp.CFrame = currentPart.CFrame * CFrame.new(0, 0, Config.Distance)
+                end
+                
+                Attack()
+                task.wait()
             end
         end
     end
@@ -568,5 +571,7 @@ PlusBtn.Activated:Connect(function()
     DistLabel.Text = "Mesafe: " .. Config.Distance
 end)
 
+-- Initialize MainContent and Update List
+MainContent = {ToggleBtn, DistLabel, ScrollingFrame, MinusBtn, PlusBtn}
 UpdateList()
 print("Universal (Mobile/PC) Farm Loaded!")
