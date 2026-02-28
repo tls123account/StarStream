@@ -332,8 +332,8 @@ task.spawn(function()
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
             if not hrp then continue end
 
-            -- Get any valid part to TP to
-            local targetPart = target:FindFirstChild("Torso") or target:FindFirstChild("HumanoidRootPart") or target:FindFirstChildWhichIsA("BasePart")
+            -- Get any valid part to TP to (Priority: Torso > Head > HRP > Any)
+            local targetPart = target:FindFirstChild("Torso") or target:FindFirstChild("Head") or target:FindFirstChild("HumanoidRootPart") or target:FindFirstChildWhichIsA("BasePart")
             
             -- Entry Check
             local canTarget = false
@@ -345,9 +345,9 @@ task.spawn(function()
 
             if canTarget and targetPart then
                 -- Stay until model is deleted or disabled
-                while target and target.Parent and Config.Enabled do
+                while target and target.Parent and Config.Enabled do 
                     local isRaidNow = string.find(string.lower(target.Name), "raid")
-                    local currentPart = target:FindFirstChild("Torso") or target:FindFirstChild("HumanoidRootPart") or target:FindFirstChildWhichIsA("BasePart")
+                    local currentPart = target:FindFirstChild("Torso") or target:FindFirstChild("Head") or target:FindFirstChild("HumanoidRootPart") or target:FindFirstChildWhichIsA("BasePart")
                     
                     if not currentPart then break end
                     
@@ -410,4 +410,4 @@ PlusBtn.Activated:Connect(function()
 end)
 
 UpdateList()
-print("Universal (Mobile/PC) Farm Loaded!")
+print("Universal (Mobile/PC) Farm Loaded!UPDATEE")
