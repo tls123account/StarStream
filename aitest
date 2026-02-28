@@ -1,577 +1,133 @@
--- Anime Tactical UNIVERSAL Auto Farm (PC & MOBILE)
--- No dependencies, very lightweight
-local CoreGui = game:GetService("CoreGui")
+-- RAID EXPERT FARM (SPECIALIZED)
+-- Targets anything containing "Raids" in workspace.Worlds.Targets.Clients
+-- Direct TP to Head/Torso with 0 offset. Instant cycle on model deletion.
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
--- Random String for Bypass
-local function randString()
-    local res = ""
-    for i = 1, 10 do res = res .. string.char(math.random(97, 122)) end
-    return res
-end
+-- GUI Setup
+local targetParent = pcall(function() return gethui and gethui() or game:GetService("CoreGui") end) and (gethui and gethui() or game:GetService("CoreGui")) or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 
--- Delta Bypass: Safe CoreGui
-local success, targetParent = pcall(function()
-    return gethui and gethui() or game:GetService("CoreGui")
-end)
-if not success or not targetParent then
-    targetParent = game:GetService("CoreGui")
-end
-
--- Clean old ones
+-- Clean old instances
 for _, v in pairs(targetParent:GetChildren()) do
-    if v:IsA("ScreenGui") and v:FindFirstChild("UniversalFarmMain") then 
-        v:Destroy() 
-    end
+    if v.Name == "RaidExpertGui" then v:Destroy() end
 end
 
 local Config = {
-    Enabled = false,
-    Distance = 4,
-    SelectedMob = "All",
-    TPSpeed = 0.1,
-    RemoveEffects = false,
-    AutoCollectRewards = false,
-    SelectedRaidLocation = "Namex Planet",
-    SelectedRaidDifficulty = "Easy"
+    Enabled = false
 }
 
--- Simple GUI
+-- Lightweight Premium GUI
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = randString()
--- Removed ZIndexBehavior and ResetOnSpawn as Delta sometimes throws silent errors on property sets
+ScreenGui.Name = "RaidExpertGui"
 ScreenGui.Parent = targetParent
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Name = "UniversalFarmMain" -- Tag for cleaning
-MainFrame.Size = UDim2.new(0, 300, 0, 350)
-MainFrame.Position = UDim2.new(0.5, -150, 0.5, -175)
-MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 220, 0, 100)
+MainFrame.Position = UDim2.new(0.5, -110, 0.5, -50)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
 
 local UICorner = Instance.new("UICorner", MainFrame)
+UICorner.CornerRadius = UDim.new(0, 10)
+
+local UIStroke = Instance.new("UIStroke", MainFrame)
+UIStroke.Color = Color3.fromRGB(150, 50, 255)
+UIStroke.Thickness = 2
+UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
 local Title = Instance.new("TextLabel")
-Title.Name = "FarmTitle"
-Title.Size = UDim2.new(0, 300, 0, 35)
-Title.Position = UDim2.new(0, 0, 0, 0)
-Title.Text = "  MOBILE & PC AUTO FARM"
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundTransparency = 1
+Title.Text = "RAID EXPERT v1.0"
 Title.TextColor3 = Color3.new(1, 1, 1)
-Title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 16
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.BorderSizePixel = 0
 Title.Parent = MainFrame
 
 local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Name = "ToggleBtn"
-ToggleBtn.Size = UDim2.new(0, 280, 0, 45)
-ToggleBtn.Position = UDim2.new(0, 10, 0, 50) -- Absolute position
-ToggleBtn.Text = "Farm: OFF"
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+ToggleBtn.Size = UDim2.new(0, 180, 0, 45)
+ToggleBtn.Position = UDim2.new(0.5, -90, 0.5, -5)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
+ToggleBtn.Text = "RAID FARM: OFF"
 ToggleBtn.TextColor3 = Color3.new(1, 1, 1)
 ToggleBtn.Font = Enum.Font.SourceSansBold
 ToggleBtn.TextSize = 18
 ToggleBtn.BorderSizePixel = 0
 ToggleBtn.Parent = MainFrame
 
-local DistLabel = Instance.new("TextLabel")
-DistLabel.Name = "DistLabel"
-DistLabel.Size = UDim2.new(0, 150, 0, 20)
-DistLabel.Position = UDim2.new(0, 75, 0, 110)
-DistLabel.Text = "Mesafe: 4"
-DistLabel.TextColor3 = Color3.new(0.8, 0.8, 0.8)
-DistLabel.BackgroundTransparency = 1
-DistLabel.TextSize = 14
-DistLabel.Font = Enum.Font.SourceSans
-DistLabel.Parent = MainFrame
+local BtnCorner = Instance.new("UICorner", ToggleBtn)
+BtnCorner.CornerRadius = UDim.new(0, 8)
 
-local ScrollingFrame = Instance.new("ScrollingFrame")
-ScrollingFrame.Name = "FarmList"
-ScrollingFrame.Size = UDim2.new(0, 280, 0, 150)
-ScrollingFrame.Position = UDim2.new(0, 10, 0, 150)
-ScrollingFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-ScrollingFrame.BorderSizePixel = 0
-ScrollingFrame.ScrollBarThickness = 6
-ScrollingFrame.Parent = MainFrame
-
-local SettingsFrame = Instance.new("Frame")
-SettingsFrame.Name = "SettingsFrame"
-SettingsFrame.Size = UDim2.new(0, 280, 0, 250)
-SettingsFrame.Position = UDim2.new(0, 10, 0, 50)
-SettingsFrame.BackgroundTransparency = 1
-SettingsFrame.Visible = false
-SettingsFrame.Parent = MainFrame
-
--- Tab switching logic (MainContent table initialized later to include all buttons)
-local MainContent = {} 
-
-local function ShowTab(name)
-    local isSettings = (name == "Settings")
-    SettingsFrame.Visible = isSettings
-    for _, v in pairs(MainContent) do
-        if v then v.Visible = (name == "Main") end
-    end
-    SettingsFrame.Visible = (name == "Settings")
-    if RaidFrame then RaidFrame.Visible = (name == "Raid") end
-end
-
--- RAID TAB CONTENT
-RaidFrame = Instance.new("Frame")
-RaidFrame.Name = "RaidFrame"
-RaidFrame.Size = UDim2.new(0, 280, 0, 250)
-RaidFrame.Position = UDim2.new(0, 10, 0, 50)
-RaidFrame.BackgroundTransparency = 1
-RaidFrame.Visible = false
-RaidFrame.Parent = MainFrame
-
-local RaidLocLabel = Instance.new("TextLabel")
-RaidLocLabel.Size = UDim2.new(1, 0, 0, 20)
-RaidLocLabel.Position = UDim2.new(0, 0, 0, 0)
-RaidLocLabel.Text = "Raid Location:"
-RaidLocLabel.TextColor3 = Color3.new(1, 1, 1)
-RaidLocLabel.BackgroundTransparency = 1
-RaidLocLabel.Font = Enum.Font.SourceSansBold
-RaidLocLabel.Parent = RaidFrame
-
-local LocList = {"Namex Planet", "Colosseum Kingdom", "Demon Forest", "Dungeons Town"}
-local DiffList = {"Easy", "Medium", "Hard", "Nightmare"}
-
-local function CreateSelectionBtn(parent, list, configKey, yStart, labelObj)
-    local xOffset = 0
-    for _, val in ipairs(list) do
-        local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(0, 65, 0, 25)
-        btn.Position = UDim2.new(0, xOffset, 0, yStart)
-        btn.Text = val
-        btn.TextScaled = true
-        btn.BackgroundColor3 = (Config[configKey] == val) and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(45, 45, 45)
-        btn.TextColor3 = Color3.new(1, 1, 1)
-        btn.BorderSizePixel = 0
-        btn.Parent = parent
-        
-        btn.Activated:Connect(function() 
-            Config[configKey] = val
-            -- Refresh all buttons in this row (simple way)
-            for _, b in pairs(parent:GetChildren()) do
-                if b:IsA("TextButton") and b.Position.Y.Offset == yStart then
-                    local isMatch = (b.Text == Config[configKey])
-                    b.BackgroundColor3 = isMatch and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(45, 45, 45)
-                end
-            end
-        end)
-        xOffset = xOffset + 70
-    end
-end
-
-CreateSelectionBtn(RaidFrame, LocList, "SelectedRaidLocation", 25)
-
-local RaidDiffLabel = Instance.new("TextLabel")
-RaidDiffLabel.Size = UDim2.new(1, 0, 0, 20)
-RaidDiffLabel.Position = UDim2.new(0, 0, 0, 60)
-RaidDiffLabel.Text = "Difficulty:"
-RaidDiffLabel.TextColor3 = Color3.new(1, 1, 1)
-RaidDiffLabel.BackgroundTransparency = 1
-RaidDiffLabel.Font = Enum.Font.SourceSansBold
-RaidDiffLabel.Parent = RaidFrame
-
-CreateSelectionBtn(RaidFrame, DiffList, "SelectedRaidDifficulty", 85)
-
-local StartRaidBtn = Instance.new("TextButton")
-StartRaidBtn.Size = UDim2.new(0, 280, 0, 50)
-StartRaidBtn.Position = UDim2.new(0, 0, 0, 130)
-StartRaidBtn.Text = "START RAID"
-StartRaidBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-StartRaidBtn.TextColor3 = Color3.new(1, 1, 1)
-StartRaidBtn.Font = Enum.Font.SourceSansBold
-StartRaidBtn.TextSize = 20
-StartRaidBtn.BorderSizePixel = 0
-StartRaidBtn.Parent = RaidFrame
-
-StartRaidBtn.Activated:Connect(function()
-    local Systems = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Systems")
-    local Gameplays = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Gameplays")
-    local Misc = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Misc")
-    
-    -- Optional TP to Pod Center (Fix for remote firing distance)
-    pcall(function()
-        local podCenter = workspace:FindFirstChild("Raids_Entering") and workspace.Raids_Entering:FindFirstChild("Pod_01") and workspace.Raids_Entering.Pod_01:FindFirstChild("Centers")
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if podCenter and hrp then
-            hrp.CFrame = podCenter.CFrame
-            task.wait(0.2)
-        end
-    end)
-
-    -- Fire in exact order provided (Event -> Lobbies -> Parties)
-    -- 1. Start Event (Create)
-    pcall(function() Systems:WaitForChild("RaidsEvent"):FireServer(Config.SelectedRaidLocation, Config.SelectedRaidDifficulty) end)
-    -- 2. Lobbies (Join/Set)
-    pcall(function() Gameplays:WaitForChild("RaidsLobbies"):FireServer(Instance.new("Folder"), {[3] = true}) end)
-    -- 3. Parties Disable (Lock)
-    pcall(function() Misc:WaitForChild("Parties"):FireServer("Disabled") end)
-    
-    StartRaidBtn.Text = "Starting..."
-    task.wait(2)
-    StartRaidBtn.Text = "START RAID"
-end)
-
--- Remove UIListLayout and calculate positions manually to bypass Delta bugs
--- Utility
-local function GetSafeClients()
-    local w = workspace:FindFirstChild("Worlds")
-    local t = w and w:FindFirstChild("Targets")
-    return t and t:FindFirstChild("Clients")
-end
-
-local function UpdateList()
-    for _, v in pairs(ScrollingFrame:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
-    
-    local yOffset = 0
-    local btnHeight = 30
-    local padding = 5
-    
-    local function CreateMobBtn(name, displayName)
-        local btn = Instance.new("TextButton")
-        -- Use strict pixel counts to avoid Delta scaling bugs
-        btn.Size = UDim2.new(0, 260, 0, btnHeight)
-        btn.Position = UDim2.new(0, 5, 0, yOffset)
-        btn.Text = displayName or name
-        btn.TextScaled = true
-        btn.BackgroundColor3 = (Config.SelectedMob == name) and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(35, 35, 35)
-        btn.TextColor3 = Color3.new(1, 1, 1)
-        btn.Font = Enum.Font.SourceSans
-        btn.BorderSizePixel = 0
-        btn.Parent = ScrollingFrame
-        
-        btn.Activated:Connect(function()
-            Config.SelectedMob = name
-            UpdateList()
-        end)
-        
-        yOffset = yOffset + btnHeight + padding
-    end
-
-    CreateMobBtn("All", "Tum Hedefler (All)")
-    CreateMobBtn("All Raids", "Sadece Raidler (All Raids)")
-    
-    local clients = GetSafeClients()
-    if clients then
-        local added = {}
-        for _, npc in ipairs(clients:GetChildren()) do
-            if not added[npc.Name] then
-                added[npc.Name] = true
-                
-                local dName = npc.Name
-                local isRaid = string.find(string.lower(npc.Name), "raid")
-                if isRaid then
-                    dName = "Raid: " .. string.sub(dName, 1, 15) .. "..."
-                end
-                
-                CreateMobBtn(npc.Name, dName)
-            end
-        end
-    end
-    
-    ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, yOffset)
-end
-
--- Auto-refresh list when NPCs change
-task.spawn(function()
-    while true do
-        local clients = GetSafeClients()
-        if clients then
-            clients.ChildAdded:Connect(UpdateList)
-            clients.ChildRemoved:Connect(UpdateList)
-            break
-        end
-        task.wait(1)
-    end
-end)
-
--- Mobile & PC Attack (Simulate Tool Use)
+-- Functions
 local function Attack()
     local char = LocalPlayer.Character
     local tool = char and char:FindFirstChildWhichIsA("Tool")
     if tool then
-        tool:Activate() -- Mobile-friendly tool use
+        tool:Activate()
     end
 end
 
+local function GetRaidNPCs()
+    local list = {}
+    local worlds = workspace:FindFirstChild("Worlds")
+    local targets = worlds and worlds:FindFirstChild("Targets")
+    local clients = targets and targets:FindFirstChild("Clients")
+    
+    if clients then
+        for _, npc in ipairs(clients:GetChildren()) do
+            if string.find(string.lower(npc.Name), "raids") then
+                table.insert(list, npc)
+            end
+        end
+    end
+    return list
+end
+
+-- Toggle Logic
 ToggleBtn.Activated:Connect(function()
     Config.Enabled = not Config.Enabled
-    ToggleBtn.Text = "Farm: " .. (Config.Enabled and "ON" or "OFF")
-    ToggleBtn.BackgroundColor3 = Config.Enabled and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(180, 50, 50)
+    ToggleBtn.Text = "RAID FARM: " .. (Config.Enabled and "ON" or "OFF")
+    ToggleBtn.BackgroundColor3 = Config.Enabled and Color3.fromRGB(40, 180, 40) or Color3.fromRGB(180, 40, 40)
+    UIStroke.Color = Config.Enabled and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(150, 50, 255)
 end)
 
--- Settings Tabs Buttons
-local MainTabBtn = Instance.new("TextButton")
-MainTabBtn.Size = UDim2.new(0, 90, 0, 25)
-MainTabBtn.Position = UDim2.new(0, 5, 0, 315)
-MainTabBtn.Text = "Main"
-MainTabBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-MainTabBtn.TextColor3 = Color3.new(1, 1, 1)
-MainTabBtn.BorderSizePixel = 0
-MainTabBtn.Parent = MainFrame
-MainTabBtn.Activated:Connect(function() ShowTab("Main") end)
-
-local RaidTabBtn = Instance.new("TextButton")
-RaidTabBtn.Size = UDim2.new(0, 90, 0, 25)
-RaidTabBtn.Position = UDim2.new(0, 105, 0, 315)
-RaidTabBtn.Text = "Raid"
-RaidTabBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-RaidTabBtn.TextColor3 = Color3.new(1, 1, 1)
-RaidTabBtn.BorderSizePixel = 0
-RaidTabBtn.Parent = MainFrame
-RaidTabBtn.Activated:Connect(function() ShowTab("Raid") end)
-
-local SettingsTabBtn = Instance.new("TextButton")
-SettingsTabBtn.Size = UDim2.new(0, 90, 0, 25)
-SettingsTabBtn.Position = UDim2.new(0, 205, 0, 315)
-SettingsTabBtn.Text = "Settings"
-SettingsTabBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-SettingsTabBtn.TextColor3 = Color3.new(1, 1, 1)
-SettingsTabBtn.BorderSizePixel = 0
-SettingsTabBtn.Parent = MainFrame
-SettingsTabBtn.Activated:Connect(function() ShowTab("Settings") end)
-
--- Settings Content
-local RemoveEffectsBtn = Instance.new("TextButton")
-RemoveEffectsBtn.Size = UDim2.new(1, 0, 0, 40)
-RemoveEffectsBtn.Position = UDim2.new(0, 0, 0, 0)
-RemoveEffectsBtn.Text = "Remove Effects: OFF"
-RemoveEffectsBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
-RemoveEffectsBtn.TextColor3 = Color3.new(1, 1, 1)
-RemoveEffectsBtn.BorderSizePixel = 0
-RemoveEffectsBtn.Parent = SettingsFrame
-
-RemoveEffectsBtn.Activated:Connect(function()
-    Config.RemoveEffects = not Config.RemoveEffects
-    RemoveEffectsBtn.Text = "Remove Effects: " .. (Config.RemoveEffects and "ON" or "OFF")
-    RemoveEffectsBtn.BackgroundColor3 = Config.RemoveEffects and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(180, 50, 50)
-end)
-
-local FpsBoostBtn = Instance.new("TextButton")
-FpsBoostBtn.Size = UDim2.new(1, 0, 0, 40)
-FpsBoostBtn.Position = UDim2.new(0, 0, 0, 50)
-FpsBoostBtn.Text = "FPS Boost (Click Once)"
-FpsBoostBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 150)
-FpsBoostBtn.TextColor3 = Color3.new(1, 1, 1)
-FpsBoostBtn.BorderSizePixel = 0
-FpsBoostBtn.Parent = SettingsFrame
-
-FpsBoostBtn.Activated:Connect(function()
-    -- EXTREME FPS Boost logic
-    local lighting = game:GetService("Lighting")
-    lighting.GlobalShadows = false
-    lighting.FogEnd = 9e9
-    lighting.Brightness = 1
-    
-    -- Disable Post-Processing Effects
-    for _, effect in pairs(lighting:GetChildren()) do
-        if effect:IsA("PostProcessEffect") or effect:IsA("BloomEffect") or effect:IsA("BlurEffect") or effect:IsA("ColorCorrectionEffect") or effect:IsA("SunRaysEffect") then
-            effect.Enabled = false
-        end
-    end
-    
-    settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
-    
-    for _, v in pairs(game:GetDescendants()) do
-        if v:IsA("BasePart") then
-            v.Material = Enum.Material.SmoothPlastic
-            v.Reflectance = 0
-            v.CastShadow = false
-        elseif v:IsA("Decal") or v:IsA("Texture") then
-            v:Destroy()
-        elseif v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Fire") or v:IsA("Smoke") or v:IsA("Sparkles") then
-            v.Enabled = false
-        end
-    end
-    
-    -- Optimize Terrain
-    local terrain = workspace:FindFirstChildOfClass("Terrain")
-    if terrain then
-        terrain.WaterWaveSize = 0
-        terrain.WaterWaveSpeed = 0
-        terrain.WaterReflectance = 0
-        terrain.WaterTransparency = 0
-    end
-    
-    FpsBoostBtn.Text = "EXTREME BOOSTED!"
-    FpsBoostBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-end)
-
-local AutoCollectBtn = Instance.new("TextButton")
-AutoCollectBtn.Size = UDim2.new(1, 0, 0, 40)
-AutoCollectBtn.Position = UDim2.new(0, 0, 0, 100)
-AutoCollectBtn.Text = "Auto Collect Rewards: OFF"
-AutoCollectBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
-AutoCollectBtn.TextColor3 = Color3.new(1, 1, 1)
-AutoCollectBtn.BorderSizePixel = 0
-AutoCollectBtn.Parent = SettingsFrame
-
-AutoCollectBtn.Activated:Connect(function()
-    Config.AutoCollectRewards = not Config.AutoCollectRewards
-    AutoCollectBtn.Text = "Auto Collect Rewards: " .. (Config.AutoCollectRewards and "ON" or "OFF")
-    AutoCollectBtn.BackgroundColor3 = Config.AutoCollectRewards and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(180, 50, 50)
-end)
-
--- Effects Cleaner: INSTANT Removal
-local function ClearVisual()
-    local visual = workspace:FindFirstChild("Visual")
-    if visual then
-        for _, child in pairs(visual:GetChildren()) do
-            if child.Name ~= "Player" then
-                pcall(function() child:Destroy() end)
-            end
-        end
-    end
-end
-
--- Listen for new items instantly
-task.spawn(function()
-    local visual = workspace:WaitForChild("Visual")
-    visual.ChildAdded:Connect(function(child)
-        if Config.RemoveEffects and child.Name ~= "Player" then
-            task.wait() -- Small wait to ensure it exists before destroying (prevents some engine crashes)
-            pcall(function() child:Destroy() end)
-        end
-    end)
-    
-    -- Periodic backup clear just in case
-    while task.wait(2) do
-        if Config.RemoveEffects then
-            ClearVisual()
-        end
-        if Config.AutoCollectRewards then
-            local raids_visual = workspace:FindFirstChild("Raids_Visual")
-            if raids_visual then
-                for _, server_folder in pairs(raids_visual:GetChildren()) do
-                    if string.find(server_folder.Name, LocalPlayer.Name) then
-                        pcall(function()
-                            local rewards = server_folder:FindFirstChild("Configs") and server_folder.Configs:FindFirstChild("Others") and server_folder.Configs.Others:FindFirstChild("Rewards")
-                            if rewards then
-                                local special = rewards:FindFirstChild("Special") and rewards.Special:FindFirstChild("Primary") and rewards.Special.Primary:FindFirstChildOfClass("ProximityPrompt")
-                                if special then fireproximityprompt(special) end
-                                
-                                local golds = rewards:FindFirstChild("Golds") and rewards.Golds:FindFirstChild("Primary") and rewards.Golds.Primary:FindFirstChildOfClass("ProximityPrompt")
-                                if golds then fireproximityprompt(golds) end
-                            end
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end)
-
--- Loop
+-- Main Loop
 task.spawn(function()
     while true do
-        task.wait(0.1)
+        task.wait(0.2)
         if not Config.Enabled then continue end
         
-        local clients = GetSafeClients()
-        if not clients then continue end
-
-        local targets = clients:GetChildren()
-        for _, target in ipairs(targets) do
+        local targets = GetRaidNPCs()
+        if #targets == 0 then continue end
+        
+        for _, npc in ipairs(targets) do
             if not Config.Enabled then break end
             
-            -- Basic existence check before starting
-            if not target or not target.Parent then continue end
-
-            local isRaid = string.find(string.lower(target.Name), "raid")
-            if Config.SelectedMob == "All Raids" then
-                if not isRaid then continue end
-            elseif Config.SelectedMob ~= "All" and target.Name ~= Config.SelectedMob then 
-                continue 
-            end
-
-            local char = LocalPlayer.Character
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            if not hrp then continue end
-
-            -- Target Logic
-            while target and target.Parent and Config.Enabled do 
-                local isRaidNow = string.find(string.lower(target.Name), "raid")
-                local currentPart = target:FindFirstChild("Torso") or target:FindFirstChild("Head") or target:FindFirstChild("HumanoidRootPart") or target:FindFirstChildWhichIsA("BasePart")
+            -- Targeted Loop
+            while npc and npc.Parent and Config.Enabled do
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                if not hrp then break end
                 
-                if not currentPart then break end
+                -- Priority: Head or Torso for maximum hit registration
+                local targetPart = npc:FindFirstChild("Head") or npc:FindFirstChild("Torso") or npc:FindFirstChildWhichIsA("BasePart")
+                if not targetPart then break end
                 
-                -- Death check for NORMAL mobs only (Raids ignore transparency/death state)
-                if not isRaidNow and currentPart.Transparency >= 0.9 then
-                    break
-                end
-                
-                -- Selection check
-                if Config.SelectedMob == "All Raids" then
-                    if not isRaidNow then break end
-                elseif Config.SelectedMob ~= "All" and target.Name ~= Config.SelectedMob then 
-                    break 
-                end
-                
-                hrp.Velocity = Vector3.new(0,0,0)
-                
-                if isRaidNow then
-                    -- Simplified TP: Directly onto Head/Torso for Raids
-                    local raidPart = target:FindFirstChild("Head") or target:FindFirstChild("Torso") or currentPart
-                    hrp.CFrame = raidPart.CFrame
-                else
-                    -- Normal TP: Follow with Distance Offset
-                    hrp.CFrame = currentPart.CFrame * CFrame.new(0, 0, Config.Distance)
-                end
+                -- Direct TP
+                hrp.Velocity = Vector3.zero
+                hrp.CFrame = targetPart.CFrame
                 
                 Attack()
-                task.wait()
+                task.wait() -- Fast as possible
             end
         end
     end
 end)
 
--- Dist control via simple clicks for Mobile
-local MinusBtn = Instance.new("TextButton")
-MinusBtn.Name = "MinusBtn"
-MinusBtn.Size = UDim2.new(0, 35, 0, 30)
-MinusBtn.Position = UDim2.new(0, 10, 0, 105)
-MinusBtn.Text = "-"
-MinusBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-MinusBtn.TextColor3 = Color3.new(1, 1, 1)
-MinusBtn.Font = Enum.Font.SourceSansBold
-MinusBtn.TextSize = 20
-MinusBtn.BorderSizePixel = 0
-MinusBtn.Parent = MainFrame
-
-MinusBtn.Activated:Connect(function()
-    Config.Distance = math.max(2, Config.Distance - 1)
-    DistLabel.Text = "Mesafe: " .. Config.Distance
-end)
-
-local PlusBtn = Instance.new("TextButton")
-PlusBtn.Name = "PlusBtn"
-PlusBtn.Size = UDim2.new(0, 35, 0, 30)
-PlusBtn.Position = UDim2.new(0, 255, 0, 105)
-PlusBtn.Text = "+"
-PlusBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-PlusBtn.TextColor3 = Color3.new(1, 1, 1)
-PlusBtn.Font = Enum.Font.SourceSansBold
-PlusBtn.TextSize = 20
-PlusBtn.BorderSizePixel = 0
-PlusBtn.Parent = MainFrame
-
-PlusBtn.Activated:Connect(function()
-    Config.Distance = math.min(15, Config.Distance + 1)
-    DistLabel.Text = "Mesafe: " .. Config.Distance
-end)
-
--- Initialize MainContent and Update List
-MainContent = {ToggleBtn, DistLabel, ScrollingFrame, MinusBtn, PlusBtn}
-UpdateList()
-print("Universal (Mobile/PC) Farm Loaded!")
+print("Raid Expert Loaded! Targeting name: 'Raids'")
