@@ -33,7 +33,9 @@ local Config = {
     SelectedMob = "All",
     TPSpeed = 0.1,
     RemoveEffects = false,
-    AutoCollectRewards = false
+    AutoCollectRewards = false,
+    SelectedRaidLocation = "Namex Planet",
+    SelectedRaidDifficulty = "Easy"
 }
 
 -- Simple GUI
@@ -58,7 +60,7 @@ local Title = Instance.new("TextLabel")
 Title.Name = "FarmTitle"
 Title.Size = UDim2.new(0, 300, 0, 35)
 Title.Position = UDim2.new(0, 0, 0, 0)
-Title.Text = "  MOBILE & PC AUTO FARM V2"
+Title.Text = "  MOBILE & PC AUTO FARM"
 Title.TextColor3 = Color3.new(1, 1, 1)
 Title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 Title.Font = Enum.Font.SourceSansBold
@@ -113,9 +115,100 @@ local function ShowTab(name)
     local isSettings = (name == "Settings")
     SettingsFrame.Visible = isSettings
     for _, v in pairs(MainContent) do
-        if v then v.Visible = not isSettings end
+        if v then v.Visible = (name == "Main") end
+    end
+    SettingsFrame.Visible = (name == "Settings")
+    RaidFrame.Visible = (name == "Raid")
+end
+
+-- RAID TAB CONTENT
+RaidFrame = Instance.new("Frame")
+RaidFrame.Name = "RaidFrame"
+RaidFrame.Size = UDim2.new(0, 280, 0, 250)
+RaidFrame.Position = UDim2.new(0, 10, 0, 50)
+RaidFrame.BackgroundTransparency = 1
+RaidFrame.Visible = false
+RaidFrame.Parent = MainFrame
+
+local RaidLocLabel = Instance.new("TextLabel")
+RaidLocLabel.Size = UDim2.new(1, 0, 0, 20)
+RaidLocLabel.Position = UDim2.new(0, 0, 0, 0)
+RaidLocLabel.Text = "Raid Location:"
+RaidLocLabel.TextColor3 = Color3.new(1, 1, 1)
+RaidLocLabel.BackgroundTransparency = 1
+RaidLocLabel.Font = Enum.Font.SourceSansBold
+RaidLocLabel.Parent = RaidFrame
+
+local LocList = {"Namex Planet", "Colosseum Kingdom", "Demon Forest", "Dungeons Town"}
+local DiffList = {"Easy", "Medium", "Hard", "Nightmare"}
+
+local function CreateSelectionBtn(parent, list, configKey, yStart, labelObj)
+    local xOffset = 0
+    for _, val in ipairs(list) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(0, 65, 0, 25)
+        btn.Position = UDim2.new(0, xOffset, 0, yStart)
+        btn.Text = val
+        btn.TextScaled = true
+        btn.BackgroundColor3 = (Config[configKey] == val) and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(45, 45, 45)
+        btn.TextColor3 = Color3.new(1, 1, 1)
+        btn.BorderSizePixel = 0
+        btn.Parent = parent
+        
+        btn.Activated:Connect(function() 
+            Config[configKey] = val
+            -- Refresh all buttons in this row (simple way)
+            for _, b in pairs(parent:GetChildren()) do
+                if b:IsA("TextButton") and b.Position.Y.Offset == yStart then
+                    local isMatch = (b.Text == Config[configKey])
+                    b.BackgroundColor3 = isMatch and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(45, 45, 45)
+                end
+            end
+        end)
+        xOffset = xOffset + 70
     end
 end
+
+CreateSelectionBtn(RaidFrame, LocList, "SelectedRaidLocation", 25)
+
+local RaidDiffLabel = Instance.new("TextLabel")
+RaidDiffLabel.Size = UDim2.new(1, 0, 0, 20)
+RaidDiffLabel.Position = UDim2.new(0, 0, 0, 60)
+RaidDiffLabel.Text = "Difficulty:"
+RaidDiffLabel.TextColor3 = Color3.new(1, 1, 1)
+RaidDiffLabel.BackgroundTransparency = 1
+RaidDiffLabel.Font = Enum.Font.SourceSansBold
+RaidDiffLabel.Parent = RaidFrame
+
+CreateSelectionBtn(RaidFrame, DiffList, "SelectedRaidDifficulty", 85)
+
+local StartRaidBtn = Instance.new("TextButton")
+StartRaidBtn.Size = UDim2.new(0, 280, 0, 50)
+StartRaidBtn.Position = UDim2.new(0, 0, 0, 130)
+StartRaidBtn.Text = "START RAID"
+StartRaidBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+StartRaidBtn.TextColor3 = Color3.new(1, 1, 1)
+StartRaidBtn.Font = Enum.Font.SourceSansBold
+StartRaidBtn.TextSize = 20
+StartRaidBtn.BorderSizePixel = 0
+StartRaidBtn.Parent = RaidFrame
+
+StartRaidBtn.Activated:Connect(function()
+    local Systems = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Systems")
+    local Gameplays = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Gameplays")
+    local Misc = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Misc")
+    
+    -- 1. Parties Disable
+    pcall(function() Misc:WaitForChild("Parties"):FireServer("Disabled") end)
+    -- 2. Lobbies
+    pcall(function() Gameplays:WaitForChild("RaidsLobbies"):FireServer(Instance.new("Folder"), {[3] = true}) end)
+    -- 3. Start Event
+    pcall(function() Systems:WaitForChild("RaidsEvent"):FireServer(Config.SelectedRaidLocation, Config.SelectedRaidDifficulty) end)
+    
+    StartRaidBtn.Text = "Starting..."
+    task.wait(2)
+    StartRaidBtn.Text = "START RAID"
+end)
 
 -- Remove UIListLayout and calculate positions manually to bypass Delta bugs
 -- Utility
@@ -194,7 +287,7 @@ end)
 
 -- Settings Tabs Buttons
 local MainTabBtn = Instance.new("TextButton")
-MainTabBtn.Size = UDim2.new(0, 140, 0, 25)
+MainTabBtn.Size = UDim2.new(0, 90, 0, 25)
 MainTabBtn.Position = UDim2.new(0, 5, 0, 315)
 MainTabBtn.Text = "Main"
 MainTabBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
@@ -203,9 +296,19 @@ MainTabBtn.BorderSizePixel = 0
 MainTabBtn.Parent = MainFrame
 MainTabBtn.Activated:Connect(function() ShowTab("Main") end)
 
+local RaidTabBtn = Instance.new("TextButton")
+RaidTabBtn.Size = UDim2.new(0, 90, 0, 25)
+RaidTabBtn.Position = UDim2.new(0, 105, 0, 315)
+RaidTabBtn.Text = "Raid"
+RaidTabBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+RaidTabBtn.TextColor3 = Color3.new(1, 1, 1)
+RaidTabBtn.BorderSizePixel = 0
+RaidTabBtn.Parent = MainFrame
+RaidTabBtn.Activated:Connect(function() ShowTab("Raid") end)
+
 local SettingsTabBtn = Instance.new("TextButton")
-SettingsTabBtn.Size = UDim2.new(0, 140, 0, 25)
-SettingsTabBtn.Position = UDim2.new(0, 155, 0, 315)
+SettingsTabBtn.Size = UDim2.new(0, 90, 0, 25)
+SettingsTabBtn.Position = UDim2.new(0, 205, 0, 315)
 SettingsTabBtn.Text = "Settings"
 SettingsTabBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 SettingsTabBtn.TextColor3 = Color3.new(1, 1, 1)
