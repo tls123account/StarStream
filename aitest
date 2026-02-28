@@ -331,8 +331,8 @@ task.spawn(function()
             local char = LocalPlayer.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
             
-            -- Cycle through: find first alive
-            if torso and hrp and torso.Transparency < 0.9 then
+            -- Cycle through: find first alive (Bypass transparency for Raids)
+            if torso and hrp and (isRaid or torso.Transparency < 0.9) then
                 -- Stay until death
                 while target and target.Parent and Config.Enabled do
                     local isRaid = string.match(target.Name, "^Raids")
